@@ -1,6 +1,7 @@
 import numpy as np
 import trimesh
 import pyrender
+import random
 
 # Function to generate the L-system string
 def generate_l_system(axiom, rules, generations):
@@ -8,12 +9,12 @@ def generate_l_system(axiom, rules, generations):
     for _ in range(generations):
         next_string = ""
         for char in current_string:
-            next_string += rules.get(char, char)  # Apply rule if exists, else keep char
+            next_string += rules.get(char, char)  # Apply rule if it exists, else keep the same character
         current_string = next_string
     return current_string
 
 # Function to create the 3D L-System geometry
-def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05):
+def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.2):
     position = np.array([0, 0, 0])  # Starting position
     direction = np.array([0, 1, 0])  # Initial direction (upward)
     stack = []  # Stack to save position and direction
@@ -27,8 +28,8 @@ def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05):
             length = np.linalg.norm(vector)
 
             if length > 0:
-                # Create cylinder (branch)
-                cylinder = trimesh.creation.cylinder(radius=radius, height=length, sections=12)
+                # Create thicker cylinder (branch) for 3D printing
+                cylinder = trimesh.creation.cylinder(radius=radius, height=length, sections=16)
 
                 # Align the cylinder along the vector
                 rotation = trimesh.geometry.align_vectors([0, 0, 1], vector)
@@ -44,7 +45,7 @@ def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05):
             position = new_position
         elif command == "+":
             # Rotate left around Z-axis
-            theta = np.radians(angle)
+            theta = np.radians(angle + random.uniform(-10, 10))  # More randomness
             rotation_matrix = np.array([
                 [np.cos(theta), -np.sin(theta), 0],
                 [np.sin(theta), np.cos(theta), 0],
@@ -53,7 +54,7 @@ def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05):
             direction = np.dot(rotation_matrix, direction)
         elif command == "-":
             # Rotate right around Z-axis
-            theta = np.radians(-angle)
+            theta = np.radians(-angle + random.uniform(-10, 10))
             rotation_matrix = np.array([
                 [np.cos(theta), -np.sin(theta), 0],
                 [np.sin(theta), np.cos(theta), 0],
@@ -62,7 +63,7 @@ def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05):
             direction = np.dot(rotation_matrix, direction)
         elif command == "&":
             # Rotate down around X-axis
-            theta = np.radians(angle)
+            theta = np.radians(angle + random.uniform(-10, 10))
             rotation_matrix = np.array([
                 [1, 0, 0],
                 [0, np.cos(theta), -np.sin(theta)],
@@ -71,11 +72,29 @@ def draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05):
             direction = np.dot(rotation_matrix, direction)
         elif command == "^":
             # Rotate up around X-axis
-            theta = np.radians(-angle)
+            theta = np.radians(-angle + random.uniform(-10, 10))
             rotation_matrix = np.array([
                 [1, 0, 0],
                 [0, np.cos(theta), -np.sin(theta)],
                 [0, np.sin(theta), np.cos(theta)]
+            ])
+            direction = np.dot(rotation_matrix, direction)
+        elif command == "/":
+            # Roll left around Y-axis
+            theta = np.radians(angle + random.uniform(-10, 10))
+            rotation_matrix = np.array([
+                [np.cos(theta), 0, np.sin(theta)],
+                [0, 1, 0],
+                [-np.sin(theta), 0, np.cos(theta)]
+            ])
+            direction = np.dot(rotation_matrix, direction)
+        elif command == "\\":
+            # Roll right around Y-axis
+            theta = np.radians(-angle + random.uniform(-10, 10))
+            rotation_matrix = np.array([
+                [np.cos(theta), 0, np.sin(theta)],
+                [0, 1, 0],
+                [-np.sin(theta), 0, np.cos(theta)]
             ])
             direction = np.dot(rotation_matrix, direction)
         elif command == "[":
@@ -113,18 +132,18 @@ def visualize_model(mesh):
     scene.add(mesh_pyrender)
     viewer = pyrender.Viewer(scene, use_raymond_lighting=True)
 
-# Define L-system rules
+# Define L-system rules for more natural 3D growth
 axiom = "F"
 rules = {
-    "F": "F[+F]F[-F]F"  # Branching rule for tree-like structure
+    "F": "F[+F][-F]/F[&F]^F\\F"  # Improved branching in all directions
 }
-generations = 4  # Increase for more complexity
+generations = 3  # Increase for more complexity
 
 # Generate the L-system string
 l_system_string = generate_l_system(axiom, rules, generations)
 
 # Generate the 3D tree model
-solid_model = draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.05)
+solid_model = draw_l_system_3d(l_system_string, step=1, angle=25, radius=0.2)
 
 # Visualize the 3D tree
 visualize_model(solid_model)
